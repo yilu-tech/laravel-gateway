@@ -16,7 +16,7 @@ class ApisService
         $routes = $this->getAll();
         $apis = [];
         foreach ($routes as $route) {
-            if (isset($route->action["as"])) {
+            if (isset($route->action["as"]) && strrpos($route->action["as"],'@') > -1) {
                 $name = explode("@", $route->action["as"]);
                 $newRoute = [
                     "path" => "/".$route->uri,
