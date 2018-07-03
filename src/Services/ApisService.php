@@ -18,12 +18,18 @@ class ApisService
         foreach ($routes as $route) {
             if (isset($route->action["as"]) && strrpos($route->action["as"],'@') > -1) {
                 $name = explode("@", $route->action["as"]);
+                $authString = $name[0];
                 $newRoute = [
                     "path" => "/".$route->uri,
                     "method" => $route->methods[0],
                     "name" => $name[1],
-                    "auth" => explode("|", $name[0]),
                 ];
+
+                if($authString == '*'){
+                    $newRoute['auth'] = '*';
+                }else{
+                    $newRoute['auth'] = explode("|", $name[0]);
+                }
                 array_push($apis, $newRoute);
             }
         }
