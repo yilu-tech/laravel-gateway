@@ -15,13 +15,29 @@ class ApisService
     {
         $routes = $this->getAll();
         $apis = [];
+
         foreach ($routes as $route) {
-            if (isset($route->action["as"]) && strrpos($route->action["as"],'@') > -1) {
-                $name = explode("@", $route->action["as"]);
+            $identifier = null;
+            $action = $route->getAction();
+
+            if(isset($action['name_prefix']) && is_string($action['name_prefix']) && isset($action['as'])){
+               $identifier = $action['name_prefix'] . $action['as'];
+            }
+            else if(isset($action["as"])){
+               $identifier = $action['as'];
+            }
+
+
+            if (isset($identifier) && strrpos($identifier,'@') > -1) {
+
+                $name = explode("@",$identifier);
+                if(count($name) > 2){
+                    throw  new \Exception('api: '.$route->uri().'  name define error -> '. $identifier);
+                }
                 $authString = $name[0];
                 $newRoute = [
-                    "path" => "/".$route->uri,
-                    "method" => $route->methods[0],
+                    "path" => "/".$route->uri(),
+                    "method" => $route->methods()[0],
                     "name" => $name[1],
                 ];
 
