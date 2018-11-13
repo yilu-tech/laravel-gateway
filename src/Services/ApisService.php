@@ -34,12 +34,17 @@ class ApisService
                 if(count($name) > 2){
                     throw  new \Exception('api: '.$route->uri().'  name define error -> '. $identifier);
                 }
-                $authString = $name[0];
+                $authString = $name[0];           
                 $newRoute = [
                     "path" => "/".$route->uri(),
                     "method" => $route->methods()[0],
                     "name" => $name[1],
                 ];
+                
+                if(stripos($newRoute["name"],'!') === 0){
+                    $newRoute["name"] = str_replace('!',"",$newRoute["name"]);
+                    $newRoute["rbac_ignore"]  = true;
+                }
 
                 if($authString == '*'){
                     $newRoute['auth'] = '*';
