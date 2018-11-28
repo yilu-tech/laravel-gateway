@@ -4,56 +4,59 @@ namespace YiluTech\Gateway\Services;
 
 class ApisService
 {
-    public function getAll()
+    public function routes()
     {
-        $app = app();
-        $routes = $app->routes->getRoutes();
-        return $routes;
+        return collect(app()->routes->getRoutes());
     }
 
     public function getApis()
     {
-        $routes = $this->getAll();
-        $apis = [];
+        return $this->routes()->map(function ($route) {
 
-        foreach ($routes as $route) {
-            $identifier = null;
-            $action = $route->getAction();
+            $name = $this->getName($route->getAction());
 
-            if(isset($action['name_prefix']) && is_string($action['name_prefix']) && isset($action['as'])){
-               $identifier = $action['name_prefix'] . $action['as'];
-            }
-            else if(isset($action["as"])){
-               $identifier = $action['as'];
+            if (!$name || count($parts = explode('@', $name)) !== 2) {
+                return null;
             }
 
+            $auth = $parts[0];
+            $name = $parts[1];
 
-            if (isset($identifier) && strrpos($identifier,'@') > -1) {
+            $rbac_ignore = $name{0} === '!';
 
-                $name = explode("@",$identifier);
-                if(count($name) > 2){
-                    throw  new \Exception('api: '.$route->uri().'  name define error -> '. $identifier);
-                }
-                $authString = $name[0];           
-                $newRoute = [
-                    "path" => "/".$route->uri(),
-                    "method" => $route->methods()[0],
-                    "name" => $name[1],
-                ];
-                
-                if(stripos($newRoute["name"],'!') === 0){
-                    $newRoute["name"] = str_replace('!',"",$newRoute["name"]);
-                    $newRoute["rbac_ignore"]  = true;
-                }
-
-                if($authString == '*'){
-                    $newRoute['auth'] = '*';
-                }else{
-                    $newRoute['auth'] = explode("|", $name[0]);
-                }
-                array_push($apis, $newRoute);
+            if ($rbac_ignore) {
+                $name = substr($name, 1);
             }
+
+            if ($auth !== '*') {
+                $auth = explode('|', $auth);
+            }
+
+            $path = '/' . $route->uri();
+            $method = $route->methods()[0];
+
+            return compact('path', 'method', 'name', 'auth', 'rbac_ignore');
+        })->filter()->values();
+    }
+
+    protected function getName($action)
+    {
+        if (empty($action['as'])) {
+            return null;
         }
-        return $apis;
+
+        if (empty($action['name_prefix'])) {
+            return $action['as'];
+        }
+
+        if (is_array($action['name_prefix'])) {
+            $prefix = implode('.', array_map(function ($prefix) {
+                return rtrim($prefix, ' .');
+            }, $action['name_prefix']));
+        } else {
+            $prefix = rtrim($action['name_prefix'], ' .');
+        }
+
+        return $prefix . '.' . $action['as'];
     }
 }
