@@ -32,7 +32,7 @@ class ApisService
                 $auth = explode('|', $auth);
             }
 
-            $path = '/' . $route->uri();
+            $path = '/' . $this->getUri($route->uri());
             $method = $route->methods()[0];
 
             return compact('path', 'method', 'name', 'auth', 'rbac_ignore');
@@ -58,5 +58,12 @@ class ApisService
         }
 
         return $prefix . '.' . $action['as'];
+    }
+
+    protected function getUri($uri)
+    {
+        return preg_replace_callback('/\\{\\w+\\}?/', function ($str) {
+            return ':' . substr($str[0], 1, -1);
+        }, $uri);
     }
 }
