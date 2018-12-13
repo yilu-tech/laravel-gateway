@@ -6,14 +6,14 @@ class ApisService
 {
     public function routes()
     {
-        return collect(app()->routes->getRoutes());
+        return collect(app()->router->getRoutes());
     }
 
     public function getApis()
     {
         return $this->routes()->map(function ($route) {
 
-            $name = $this->getName($route->getAction());
+            $name = $this->getName($route);
 
             if (!$name || count($parts = explode('@', $name)) !== 2) {
                 return null;
@@ -32,15 +32,22 @@ class ApisService
                 $auth = explode('|', $auth);
             }
 
-            $path = '/' . $this->getUri($route->uri());
-            $method = $route->methods()[0];
+            $path = $this->getUri($route);
+            $method = $this->getMethod($route);
 
             return compact('path', 'method', 'name', 'auth', 'rbac_ignore');
         })->filter()->values();
     }
 
-    protected function getName($action)
+    protected function getMethod($route)
     {
+        return is_array($route) ? $route['method'] : $route->methods()[0];
+    }
+
+    protected function getName($route)
+    {
+        $action = is_array($route) ? $route['action'] : $route->getAction();
+
         if (empty($action['as'])) {
             return null;
         }
@@ -60,10 +67,10 @@ class ApisService
         return $prefix . '.' . $action['as'];
     }
 
-    protected function getUri($uri)
+    protected function getUri($route)
     {
         return preg_replace_callback('/\\{\\w+\\}?/', function ($str) {
             return ':' . substr($str[0], 1, -1);
-        }, $uri);
+        }, is_array($route) ? $route['uri'] : ('/' . $route->uri()));
     }
 }
