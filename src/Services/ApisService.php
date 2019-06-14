@@ -69,8 +69,8 @@ class ApisService
 
     protected function getUri($route)
     {
-        return preg_replace_callback('/\\{\\w+\\}?/', function ($str) {
-            return ':' . substr($str[0], 1, -1);
+        return preg_replace_callback("/\{[\w?]+\}/", function ($str) {
+            return ':' . trim($str[0], '{?}');
         }, is_array($route) ? $route['uri'] : ('/' . $route->uri()));
     }
 }
