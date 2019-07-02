@@ -64,7 +64,7 @@ class ApisService
             $prefix = rtrim($action['name_prefix'], ' .');
         }
 
-        return $prefix . '.' . $action['as'];
+        return preg_replace('/@\./', '@', $prefix . '.' . $action['as']);
     }
 
     protected function getUri($route)
