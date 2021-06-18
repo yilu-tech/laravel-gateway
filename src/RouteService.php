@@ -1,28 +1,31 @@
 <?php
 
-namespace YiluTech\Gateway\Services;
+namespace YiluTech\Gateway;
 
-class ApisService
+class RouteService
 {
-    public function routes()
+    public static function all(): array
     {
-        return collect(app()->router->getRoutes());
+        return (new static)->getApis();
     }
 
-    public function getApis()
+    public function getApis(): array
     {
-        return $this->routes()->map(function ($route) {
+        $routes = [];
 
+        $type = 'api';
+
+        foreach (app()->router->getRoutes() as $route) {
             $name = $this->getName($route);
 
-            if (!$name || count($parts = explode('@', $name)) !== 2) {
-                return null;
+            if (!$name || count($parts = explode('@', $name, 2)) !== 2) {
+                continue;
             }
 
             $auth = $parts[0];
             $name = $parts[1];
 
-            $rbac_ignore = $name{0} === '!';
+            $rbac_ignore = $name[0] === '!';
 
             if ($rbac_ignore) {
                 $name = substr($name, 1);
@@ -32,11 +35,12 @@ class ApisService
                 $auth = explode('|', $auth);
             }
 
-            $path = $this->getUri($route);
+            $path   = $this->getUri($route);
             $method = $this->getMethod($route);
 
-            return compact('path', 'method', 'name', 'auth', 'rbac_ignore');
-        })->filter()->values();
+            $routes[] = compact('name', 'type', 'method', 'path', 'auth', 'rbac_ignore');
+        }
+        return $routes;
     }
 
     protected function getMethod($route)
@@ -64,13 +68,17 @@ class ApisService
             $prefix = rtrim($action['name_prefix'], ' .');
         }
 
-        return preg_replace('/@\./', '@', $prefix . '.' . $action['as']);
+        if (strpos($prefix, '@') === strlen($prefix) - 1) {
+            return $prefix . $action['as'];
+        }
+
+        return $prefix . '.' . $action['as'];
     }
 
     protected function getUri($route)
     {
-        return preg_replace_callback("/\{[\w?]+\}/", function ($str) {
-            return ':' . trim($str[0], '{?}');
+        return preg_replace_callback('/\\{\\w+\\}?/', function ($str) {
+            return ':' . substr($str[0], 1, -1);
         }, is_array($route) ? $route['uri'] : ('/' . $route->uri()));
     }
 }
